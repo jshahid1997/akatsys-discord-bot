@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  discord-bot:
+    build: .
+    container_name: discord-news-bot
+    volumes:
+      - ./logs:/app/logs
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; exit(0 if os.path.exists('/app/logs/newsbot_' + __import__('datetime').datetime.now().strftime('%Y%m%d') + '.log') else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3 

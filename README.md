@@ -26,13 +26,42 @@ A Discord bot that automatically fetches and posts news from various sources to 
 
 ## Prerequisites
 
-- Python 3.8 or higher
+- Python 3.8 or higher (for local installation)
+- Docker and Docker Compose (for Docker installation)
 - Discord Bot Token
 - Google API Key
 - YouTube API Key
 - Gemini API Key
 
 ## Installation
+
+### Using Docker (Recommended)
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/discord-news-bot.git
+   cd discord-news-bot
+   ```
+
+2. Create a `.env` file in the root directory with your API keys:
+   ```env
+   DISCORD_TOKEN=your_discord_token
+   YOUTUBE_API_KEY=your_youtube_api_key
+   NEWS_API_KEY=your_google_api_key
+   GEMINI_API_KEY=your_gemini_api_key
+   ```
+
+3. Build and start the container:
+   ```bash
+   docker-compose up -d
+   ```
+
+4. View logs:
+   ```bash
+   docker-compose logs -f
+   ```
+
+### Local Installation
 
 1. Clone the repository:
    ```bash
@@ -72,22 +101,48 @@ The bot's configuration is stored in `src/constants/app_constants.py`. You can m
 
 ## Usage
 
+### Docker Usage
+
+1. Start the bot:
+   ```bash
+   docker-compose up -d
+   ```
+
+2. Stop the bot:
+   ```bash
+   docker-compose down
+   ```
+
+3. View logs:
+   ```bash
+   docker-compose logs -f
+   ```
+
+4. Restart the bot:
+   ```bash
+   docker-compose restart
+   ```
+
+### Local Usage
+
 1. Start the bot:
    ```bash
    python main.py
    ```
 
-2. The bot will automatically:
-   - Check RSS feeds every 30 minutes
-   - Check YouTube and Google News every 6 hours
-   - Post new content to the appropriate channels
-   - Summarize content using Gemini AI
+The bot will automatically:
+- Check RSS feeds every 30 minutes
+- Check YouTube and Google News every 6 hours
+- Post new content to the appropriate channels
+- Summarize content using Gemini AI
 
 ## Project Structure
 
 ```
 discord-news-bot/
 ├── main.py
+├── Dockerfile
+├── docker-compose.yml
 ├── src/
 │   ├── __init__.py
 │   ├── bot/
@@ -124,6 +179,14 @@ The bot includes robust error handling:
 - Automatic retries for transient errors
 - Detailed error logging
 - Fallback mechanisms for summarization
+
+## Docker Health Checks
+
+The Docker container includes health checks that:
+- Monitor the existence of log files
+- Check every 30 seconds
+- Mark container as unhealthy if checks fail
+- Automatically restart if needed
 
 ## Contributing
 
