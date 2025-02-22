@@ -1,0 +1,11 @@
+._*
+.env
+.venv
+node_modules
+venv
+recordings/
+transcriptions/
+
+._*
+
+__pycache__/
