@@ -15,6 +15,10 @@ RUN apt-get update && \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
+# Create a non-root user and group
+RUN groupadd -r botgroup && \
+    useradd -r -g botgroup -d /home/botuser -m -s /sbin/nologin botuser
+
 # Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
@@ -24,12 +28,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application
 COPY . .
 
-# Create logs directory
-RUN mkdir -p logs
-
-# Create a non-root user
-RUN useradd -m -u 1000 botuser && \
-    chown -R botuser:botuser /app
+# Create logs directory and set permissions
+RUN mkdir -p /app/logs && \
+    chown -R botuser:botgroup /app && \
+    chmod -R 755 /app && \
+    chmod -R 777 /app/logs
 
 # Switch to non-root user
 USER botuser

@@ -5,7 +5,9 @@ services:
     build: .
     container_name: discord-news-bot
     volumes:
-      - ./logs:/app/logs
+      - type: bind
+        source: ./logs
+        target: /app/logs
     env_file:
       - .env
     restart: unless-stopped
@@ -13,4 +15,5 @@ services:
       test: ["CMD", "python", "-c", "import os; exit(0 if os.path.exists('/app/logs/newsbot_' + __import__('datetime').datetime.now().strftime('%Y%m%d') + '.log') else 1)"]
       interval: 30s
       timeout: 10s
-      retries: 3 
+      retries: 3
+    user: "${UID:-1000}:${GID:-1000}" 
