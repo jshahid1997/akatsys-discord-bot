@@ -18,7 +18,7 @@ class GeminiSummarizer:
         genai.configure(api_key=self.api_key)
         self.model = genai.GenerativeModel('gemini-pro')
         
-    async def summarize(self, title: str, content: str) -> str:
+    async def summarize(self, title: str, content: str, sources: list) -> str:
         """
         Summarize the given content using Gemini.
         
@@ -30,7 +30,7 @@ class GeminiSummarizer:
             str: Summarized content
         """
         try:
-            prompt = GEMINI_PROMPT.format(title=title, content=content)
+            prompt = GEMINI_PROMPT.format(title=title, content=content, sources=sources)
             response = await self.model.generate_content_async(prompt)
             
             if response.text:

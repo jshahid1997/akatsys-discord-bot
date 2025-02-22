@@ -17,10 +17,22 @@ from src.constants.app_constants import (
 class NewsBot(commands.Bot):
     def __init__(self):
         """Initialize the NewsBot with required services and configurations."""
-        # Set up intents
+        # Set up intents with all required permissions
         intents = discord.Intents.default()
         intents.message_content = True
-        super().__init__(command_prefix='!', intents=intents)
+        intents.guilds = True
+        intents.guild_messages = True
+        intents.guild_reactions = True
+        
+        # Initialize the bot with required permissions
+        super().__init__(
+            command_prefix='!',
+            intents=intents,
+            activity=discord.Activity(
+                type=discord.ActivityType.watching,
+                name="news feeds"
+            )
+        )
         
         # Initialize logger
         self.logger = Logger(__name__)
@@ -31,6 +43,17 @@ class NewsBot(commands.Bot):
         
         # Start background tasks
         self.start_tasks()
+
+    async def on_ready(self):
+        """Called when the bot is ready and connected to Discord."""
+        self.logger.info(f"Logged in as {self.user.name} ({self.user.id})")
+        self.logger.info(f"Connected to {len(self.guilds)} guilds:")
+        for guild in self.guilds:
+            self.logger.info(f"- {guild.name} (ID: {guild.id})")
+            # Log available channels
+            self.logger.info(f"Available channels in {guild.name}:")
+            for channel in guild.text_channels:
+                self.logger.info(f"- {channel.name} (ID: {channel.id})")
         
     def start_tasks(self):
         """Initialize and start background tasks."""
@@ -54,21 +77,32 @@ class NewsBot(commands.Bot):
         for category in ['ai_news', 'hackathon_news', 'tech_news', 'startup_news']:
             channel_id = CHANNEL_IDS.get(category.upper())
             if not channel_id:
+                self.logger.warning(f"No channel ID configured for category: {category}")
                 continue
                 
             channel = self.get_channel(channel_id)
             if not channel:
-                self.logger.warning(f"Channel not found for category: {category}")
-                continue
+                # Try to find channel by name if ID doesn't work
+                category_name = category.replace('_', '-')
+                for guild in self.guilds:
+                    channel = discord.utils.get(guild.text_channels, name=category_name)
+                    if channel:
+                        break
+                
+                if not channel:
+                    self.logger.warning(f"Channel not found for category: {category}")
+                    continue
                 
             try:
                 news_items = await self.news_service.fetch_rss_news(category)
                 for item in news_items:
-                    summary = await self.summarizer.summarize(item['title'], item['description'])
+                    summary = await self.summarizer.summarize(item['title'], item['description'], item['link'])
                     embed = self.create_news_embed(item, summary, category)
                     await channel.send(embed=embed)
                     self.news_service.mark_as_processed(item['id'])
                     
+            except discord.Forbidden:
+                self.logger.error(f"Bot doesn't have permission to send messages in channel: {channel.name}")
             except Exception as e:
                 self.logger.error(f"Error processing RSS feeds for {category}: {str(e)}")
                 
@@ -80,18 +114,27 @@ class NewsBot(commands.Bot):
         for category in ['ai_news', 'hackathon_news', 'tech_news', 'startup_news']:
             channel_id = CHANNEL_IDS.get(category.upper())
             if not channel_id:
+                self.logger.warning(f"No channel ID configured for category: {category}")
                 continue
                 
             channel = self.get_channel(channel_id)
             if not channel:
-                self.logger.warning(f"Channel not found for category: {category}")
-                continue
+                # Try to find channel by name if ID doesn't work
+                category_name = category.replace('_', '-')
+                for guild in self.guilds:
+                    channel = discord.utils.get(guild.text_channels, name=category_name)
+                    if channel:
+                        break
+                
+                if not channel:
+                    self.logger.warning(f"Channel not found for category: {category}")
+                    continue
                 
             try:
                 # Fetch YouTube videos
                 videos = await self.news_service.fetch_youtube_news(category)
                 for video in videos:
-                    summary = await self.summarizer.summarize(video['title'], video['description'])
+                    summary = await self.summarizer.summarize(video['title'], video['description'], video['url'])
                     embed = self.create_youtube_embed(video, summary, category)
                     await channel.send(embed=embed)
                     self.news_service.mark_as_processed(video['id'])
@@ -99,11 +142,13 @@ class NewsBot(commands.Bot):
                 # Fetch Google News articles
                 articles = await self.news_service.fetch_google_news(category)
                 for article in articles:
-                    summary = await self.summarizer.summarize(article['title'], article['description'])
+                    summary = await self.summarizer.summarize(article['title'], article['description'], article['url'])
                     embed = self.create_news_embed(article, summary, category)
                     await channel.send(embed=embed)
                     self.news_service.mark_as_processed(article['id'])
                     
+            except discord.Forbidden:
+                self.logger.error(f"Bot doesn't have permission to send messages in channel: {channel.name}")
             except Exception as e:
                 self.logger.error(f"Error processing other sources for {category}: {str(e)}")
                 
