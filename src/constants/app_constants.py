@@ -58,7 +58,7 @@ EMBED_COLORS = {
 
 # Maximum Results
 MAX_RESULTS = {
-    'RSS_FEED': 5,
+    'RSS_FEED': 10,
     'YOUTUBE': 1,
     'GOOGLE_NEWS': 5
 }

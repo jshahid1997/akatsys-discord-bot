@@ -94,11 +94,26 @@ class NewsBot(commands.Bot):
                     continue
                 
             try:
+                # Fetch all news items
                 news_items = await self.news_service.fetch_rss_news(category)
+                if not news_items:
+                    continue
+                    
+                # Get a batch summary
+                summary = await self.summarizer.summarize_batch(category, news_items)
+                
+                # Create and send the embed
+                embed = discord.Embed(
+                    description=summary,
+                    color=EMBED_COLORS[category.upper()],
+                    timestamp=datetime.now(timezone.utc)
+                )
+                embed.set_footer(text=f"News Bot - {category.replace('_', ' ').title()}")
+                
+                await channel.send(embed=embed)
+                
+                # Mark all items as processed
                 for item in news_items:
-                    summary = await self.summarizer.summarize(item['title'], item['description'], item['link'])
-                    embed = self.create_news_embed(item, summary, category)
-                    await channel.send(embed=embed)
                     self.news_service.mark_as_processed(item['id'])
                     
             except discord.Forbidden:
@@ -131,53 +146,42 @@ class NewsBot(commands.Bot):
                     continue
                 
             try:
+                # Fetch all news items
+                all_items = []
+                
                 # Fetch YouTube videos
                 videos = await self.news_service.fetch_youtube_news(category)
-                for video in videos:
-                    summary = await self.summarizer.summarize(video['title'], video['description'], video['url'])
-                    embed = self.create_youtube_embed(video, summary, category)
-                    await channel.send(embed=embed)
-                    self.news_service.mark_as_processed(video['id'])
-                    
+                all_items.extend(videos)
+                
                 # Fetch Google News articles
                 articles = await self.news_service.fetch_google_news(category)
-                for article in articles:
-                    summary = await self.summarizer.summarize(article['title'], article['description'], article['url'])
-                    embed = self.create_news_embed(article, summary, category)
-                    await channel.send(embed=embed)
-                    self.news_service.mark_as_processed(article['id'])
+                all_items.extend(articles)
+                
+                if not all_items:
+                    continue
+                    
+                # Get a batch summary
+                summary = await self.summarizer.summarize_batch(category, all_items)
+                
+                # Create and send the embed
+                embed = discord.Embed(
+                    description=summary,
+                    color=EMBED_COLORS[category.upper()],
+                    timestamp=datetime.now(timezone.utc)
+                )
+                embed.set_footer(text=f"News Bot - {category.replace('_', ' ').title()}")
+                
+                await channel.send(embed=embed)
+                
+                # Mark all items as processed
+                for item in all_items:
+                    self.news_service.mark_as_processed(item['id'])
                     
             except discord.Forbidden:
                 self.logger.error(f"Bot doesn't have permission to send messages in channel: {channel.name}")
             except Exception as e:
                 self.logger.error(f"Error processing other sources for {category}: {str(e)}")
                 
-    def create_news_embed(self, item: dict, summary: str, category: str) -> discord.Embed:
-        """Create a Discord embed for news items."""
-        embed = discord.Embed(
-            title=item['title'],
-            url=item.get('url') or item.get('link'),
-            description=summary,
-            color=EMBED_COLORS[category.upper()],
-            timestamp=datetime.now(timezone.utc)
-        )
-        embed.add_field(name="Source", value=item['source'], inline=False)
-        embed.set_footer(text=f"News Bot - {category.replace('_', ' ').title()}")
-        return embed
-        
-    def create_youtube_embed(self, video: dict, summary: str, category: str) -> discord.Embed:
-        """Create a Discord embed for YouTube videos."""
-        embed = discord.Embed(
-            title=video['title'],
-            url=video['url'],
-            description=summary,
-            color=EMBED_COLORS[category.upper()],
-            timestamp=datetime.now(timezone.utc)
-        )
-        embed.set_thumbnail(url=video['thumbnail'])
-        embed.set_footer(text=f"YouTube - {category.replace('_', ' ').title()}")
-        return embed
-        
     @check_rss_feeds.before_loop
     @fetch_other_sources.before_loop
     async def before_tasks(self):
