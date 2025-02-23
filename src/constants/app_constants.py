@@ -12,7 +12,7 @@ CHANNEL_IDS = {
 
 # Time Intervals (in seconds)
 INTERVALS = {
-    'RSS_CHECK': 1800,  # 30 minutes
+    'RSS_CHECK': 7200,  # 2 hours
     'OTHER_SOURCES': 21600  # 6 hours
 }
 
@@ -45,7 +45,7 @@ SEARCH_QUERIES = {
     'ai_news': 'artificial intelligence news',
     'hackathon_news': 'AI hackathon news',
     'tech_news': 'latest technology news',
-    'startup_news': 'startup funding news'
+    'startup_news': 'startup news'
 }
 
 # Embed Colors

@@ -125,8 +125,8 @@ class NewsBot(commands.Bot):
             
             # Add timeout between categories
             if category != 'startup_news':  # Don't wait after the last category
-                self.logger.info(f"Waiting 60 seconds before processing next category...")
-                await asyncio.sleep(60)
+                self.logger.info(f"Waiting 300 seconds before processing next category...")
+                await asyncio.sleep(300)
                 
     @tasks.loop(seconds=INTERVALS['OTHER_SOURCES'])
     async def fetch_other_sources(self):
@@ -192,8 +192,8 @@ class NewsBot(commands.Bot):
             
             # Add timeout between categories
             if category != 'startup_news':  # Don't wait after the last category
-                self.logger.info(f"Waiting 60 seconds before processing next category...")
-                await asyncio.sleep(60)
+                self.logger.info(f"Waiting 300 seconds before processing next category...")
+                await asyncio.sleep(300)
                 
     @check_rss_feeds.before_loop
     @fetch_other_sources.before_loop
