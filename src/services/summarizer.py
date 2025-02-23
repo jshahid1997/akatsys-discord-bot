@@ -15,7 +15,7 @@ class GeminiSummarizer:
             raise ValueError("Gemini API key not found")
             
         genai.configure(api_key=self.api_key)
-        self.model = genai.GenerativeModel('gemini-pro')
+        self.model = genai.GenerativeModel('gemini-2.0-flash')
         
     async def summarize_batch(self, category: str, news_items: list) -> str:
         """
