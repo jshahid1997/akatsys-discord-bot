@@ -5,6 +5,7 @@ Main Discord bot class for handling news distribution.
 import discord
 from discord.ext import commands, tasks
 from datetime import datetime, timezone
+import asyncio
 from src.services.news_service import NewsService
 from src.services.summarizer import GeminiSummarizer
 from src.utils.logger import Logger
@@ -75,6 +76,7 @@ class NewsBot(commands.Bot):
         self.logger.info("Starting RSS feed check")
         
         for category in ['ai_news', 'hackathon_news', 'tech_news', 'startup_news']:
+            self.logger.info(f"Processing RSS feeds for category: {category}")
             channel_id = CHANNEL_IDS.get(category.upper())
             if not channel_id:
                 self.logger.warning(f"No channel ID configured for category: {category}")
@@ -120,6 +122,11 @@ class NewsBot(commands.Bot):
                 self.logger.error(f"Bot doesn't have permission to send messages in channel: {channel.name}")
             except Exception as e:
                 self.logger.error(f"Error processing RSS feeds for {category}: {str(e)}")
+            
+            # Add timeout between categories
+            if category != 'startup_news':  # Don't wait after the last category
+                self.logger.info(f"Waiting 60 seconds before processing next category...")
+                await asyncio.sleep(60)
                 
     @tasks.loop(seconds=INTERVALS['OTHER_SOURCES'])
     async def fetch_other_sources(self):
@@ -127,6 +134,7 @@ class NewsBot(commands.Bot):
         self.logger.info("Starting other sources check")
         
         for category in ['ai_news', 'hackathon_news', 'tech_news', 'startup_news']:
+            self.logger.info(f"Processing other sources for category: {category}")
             channel_id = CHANNEL_IDS.get(category.upper())
             if not channel_id:
                 self.logger.warning(f"No channel ID configured for category: {category}")
@@ -181,6 +189,11 @@ class NewsBot(commands.Bot):
                 self.logger.error(f"Bot doesn't have permission to send messages in channel: {channel.name}")
             except Exception as e:
                 self.logger.error(f"Error processing other sources for {category}: {str(e)}")
+            
+            # Add timeout between categories
+            if category != 'startup_news':  # Don't wait after the last category
+                self.logger.info(f"Waiting 60 seconds before processing next category...")
+                await asyncio.sleep(60)
                 
     @check_rss_feeds.before_loop
     @fetch_other_sources.before_loop
