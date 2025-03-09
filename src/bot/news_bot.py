@@ -45,6 +45,7 @@ class NewsBot(commands.Bot):
         # Start background tasks
         self.start_tasks()
 
+
     async def on_ready(self):
         """Called when the bot is ready and connected to Discord."""
         self.logger.info(f"Logged in as {self.user.name} ({self.user.id})")
@@ -63,12 +64,153 @@ class NewsBot(commands.Bot):
             self.fetch_other_sources
         ]
         
+    
+        
     async def setup_hook(self):
         """Set up the bot and start background tasks."""
         self.logger.info("Starting bot setup...")
         for task in self.background_tasks:
             task.start()
         self.logger.info("Bot setup completed")
+        
+    async def manual_rss_check(self, ctx, category=None):
+        """Manually trigger RSS feed check for all or a specific category."""
+        await ctx.send(f"🔄 Manually triggering RSS feed check{f' for {category}' if category else ''}...")
+        
+        categories = [category] if category else ['ai_news', 'hackathon_news', 'tech_news', 'startup_news']
+        
+        for cat in categories:
+            if cat not in ['ai_news', 'hackathon_news', 'tech_news', 'startup_news']:
+                await ctx.send(f"⚠️ Invalid category: {cat}. Skipping.")
+                continue
+                
+            await ctx.send(f"📰 Processing RSS feeds for {cat}...")
+            
+            try:
+                # Get channel for the category
+                channel_id = CHANNEL_IDS.get(cat.upper())
+                if not channel_id:
+                    await ctx.send(f"⚠️ No channel ID configured for category: {cat}")
+                    continue
+                    
+                channel = self.get_channel(channel_id)
+                if not channel:
+                    # Try to find channel by name if ID doesn't work
+                    category_name = cat.replace('_', '-')
+                    for guild in self.guilds:
+                        channel = discord.utils.get(guild.text_channels, name=category_name)
+                        if channel:
+                            break
+                    
+                    if not channel:
+                        await ctx.send(f"⚠️ Channel not found for category: {cat}")
+                        continue
+                
+                # Fetch all news items
+                news_items = await self.news_service.fetch_rss_news(cat)
+                if not news_items:
+                    await ctx.send(f"ℹ️ No new RSS items found for {cat}")
+                    continue
+                    
+                # Get a batch summary
+                summary = await self.summarizer.summarize_batch(cat, news_items)
+                
+                # Create and send the embed
+                embed = discord.Embed(
+                    description=summary,
+                    color=EMBED_COLORS[cat.upper()],
+                    timestamp=datetime.now(timezone.utc)
+                )
+                embed.set_footer(text=f"News Bot - {cat.replace('_', ' ').title()} (Manual Trigger)")
+                
+                await channel.send(embed=embed)
+                
+                # Mark all items as processed
+                for item in news_items:
+                    self.news_service.mark_as_processed(item['id'])
+                    
+                await ctx.send(f"✅ Successfully processed RSS feeds for {cat}")
+                
+            except Exception as e:
+                error_msg = f"❌ Error processing RSS feeds for {cat}: {str(e)}"
+                self.logger.error(error_msg)
+                await ctx.send(error_msg)
+        
+        await ctx.send("✅ Manual RSS feed check completed")
+        
+    async def manual_other_sources_check(self, ctx, category=None):
+        """Manually trigger other sources check for all or a specific category."""
+        await ctx.send(f"🔄 Manually triggering other sources check{f' for {category}' if category else ''}...")
+        
+        categories = [category] if category else ['ai_news', 'hackathon_news', 'tech_news', 'startup_news']
+        
+        for cat in categories:
+            if cat not in ['ai_news', 'hackathon_news', 'tech_news', 'startup_news']:
+                await ctx.send(f"⚠️ Invalid category: {cat}. Skipping.")
+                continue
+                
+            await ctx.send(f"📰 Processing other sources for {cat}...")
+            
+            try:
+                # Get channel for the category
+                channel_id = CHANNEL_IDS.get(cat.upper())
+                if not channel_id:
+                    await ctx.send(f"⚠️ No channel ID configured for category: {cat}")
+                    continue
+                    
+                channel = self.get_channel(channel_id)
+                if not channel:
+                    # Try to find channel by name if ID doesn't work
+                    category_name = cat.replace('_', '-')
+                    for guild in self.guilds:
+                        channel = discord.utils.get(guild.text_channels, name=category_name)
+                        if channel:
+                            break
+                    
+                    if not channel:
+                        await ctx.send(f"⚠️ Channel not found for category: {cat}")
+                        continue
+                
+                # Fetch all news items
+                all_items = []
+                
+                # Fetch YouTube videos
+                videos = await self.news_service.fetch_youtube_news(cat)
+                all_items.extend(videos)
+                
+                # Fetch Google News articles
+                articles = await self.news_service.fetch_google_news(cat)
+                all_items.extend(articles)
+                
+                if not all_items:
+                    await ctx.send(f"ℹ️ No new items found from other sources for {cat}")
+                    continue
+                    
+                # Get a batch summary
+                summary = await self.summarizer.summarize_batch(cat, all_items)
+                
+                # Create and send the embed
+                embed = discord.Embed(
+                    description=summary,
+                    color=EMBED_COLORS[cat.upper()],
+                    timestamp=datetime.now(timezone.utc)
+                )
+                embed.set_footer(text=f"News Bot - {cat.replace('_', ' ').title()} (Manual Trigger)")
+                
+                await channel.send(embed=embed)
+                
+                # Mark all items as processed
+                for item in all_items:
+                    self.news_service.mark_as_processed(item['id'])
+                    
+                await ctx.send(f"✅ Successfully processed other sources for {cat}")
+                
+            except Exception as e:
+                error_msg = f"❌ Error processing other sources for {cat}: {str(e)}"
+                self.logger.error(error_msg)
+                await ctx.send(error_msg)
+        
+        await ctx.send("✅ Manual other sources check completed")
         
     @tasks.loop(seconds=INTERVALS['RSS_CHECK'])
     async def check_rss_feeds(self):

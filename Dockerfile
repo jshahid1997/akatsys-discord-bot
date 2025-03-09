@@ -13,6 +13,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     gcc \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user and group
@@ -33,6 +34,10 @@ RUN mkdir -p /app/logs && \
     chown -R botuser:botgroup /app && \
     chmod -R 755 /app && \
     chmod -R 777 /app/logs
+
+# Add healthcheck to verify bot is running
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
 
 # Switch to non-root user
 USER botuser

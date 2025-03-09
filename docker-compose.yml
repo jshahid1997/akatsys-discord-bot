@@ -11,9 +11,12 @@ services:
     env_file:
       - .env
     restart: unless-stopped
+    ports:
+      - "8080:8080"  # Expose port for API access
     healthcheck:
-      test: ["CMD", "python", "-c", "import os; exit(0 if os.path.exists('/app/logs/newsbot_' + __import__('datetime').datetime.now().strftime('%Y%m%d') + '.log') else 1)"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
     user: "${UID:-1000}:${GID:-1000}" 
